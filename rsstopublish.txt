@@ -1,0 +1,30 @@
+@startuml
+participant Server
+database Database
+participant RSSFeed
+participant Hootsuite
+
+Server -> RSSFeed: Fetch articles
+RSSFeed -> Server: Articles
+
+Server -> Database: Get most recently published article
+loop "For each article"
+  alt "Article publish date is later than most recent stored article's publish date"
+    Server -> Server: Construct Post for Publishing	
+
+    Server -> Hootsuite: Publish content object
+    Hootsuite -> Server: Publish response
+
+    alt "Publish successful"
+      Server -> Database: Store article info with "PUBLISHED" key true
+    else "Recoverable error"
+      Server -> Server: Retry publish (up to 3 times)
+    else
+      Server -> Server: Log error
+      Server -> Database: Store article info with "PUBLISHED" key false and error info
+    end
+  else
+    Server -> Server: Exit loop
+  end
+end
+@enduml
